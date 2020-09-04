@@ -1,0 +1,38 @@
+MODEL: !include ../model_cfgs/ACT_MobilenetV2.yml
+
+TRAIN:
+  MAX_ITERATIONS: 30000
+  EVAL_ITER: 10000
+  BATCH_SIZE: 16
+  TRAINABLE_SCOPE: 'feature_extractor,extras,predictor'
+  RESUME_SCOPE: 'feature_extractor,extras,predictor'
+  OPTIMIZER:
+    OPTIMIZER: sgd
+    LEARNING_RATE: 0.001
+    MOMENTUM: 0.9
+    WEIGHT_DECAY: 0.0001
+    GAMMA: 0.2
+  LR_SCHEDULER:
+    SCHEDULER: COSINE
+    WARM_UP_EPOCHS: 0
+    STEPS: [10000,25000]
+
+TEST:
+  BATCH_SIZE: 8
+  TEST_SCOPE: [15000,15000]
+  IOU_THRESHOLD: 0.5
+
+MATCHER:
+  MATCHED_THRESHOLD: 0.5
+  UNMATCHED_THRESHOLD: 0.5
+  NEGPOS_RATIO: 3
+
+POST_PROCESS:
+  SCORE_THRESHOLD: 0.01
+  IOU_THRESHOLD: 0.45
+  MAX_DETECTIONS: 50
+
+EXP_DIR: './checkpoints/new_models/act_mobilenetv2/'
+LOG_DIR: './checkpoints/new_models/act_mobilenetv2/'
+RESUME_CHECKPOINT: []
+PHASE: ['train', 'eval']

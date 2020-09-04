@@ -1,0 +1,17 @@
+SSDS: ACT
+NETS: vgg16
+IMAGE_SIZE: [300, 300]
+PRIOR_BOX: 'v2'
+SPLIT_GPUS: False
+K: 2
+OFFSET_POOL: False
+GLOBAL_FEAT: False
+RNN: False
+MEANS: (104, 117, 123)
+STDS: (0.225, 0.224, 0.229)
+FEATURE_LAYER: [[32, 47, 'S', 'S', '', ''], [512, 1024, 512, 256, 256, 256]]
+TEMPORAL_LAYER: ['mean', 'mean', 'mean', 'mean', 'mean', 'mean']
+STEPS: [[8, 8], [16, 16], [32, 32], [64, 64], [100, 100], [300, 300]]
+SIZES: [[30, 60], [60, 111], [111, 162], [162, 213], [213, 264], [264, 315]]
+ASPECT_RATIOS: [[1, 2], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3]]
+VARIANCE: [0.1, 0.2]

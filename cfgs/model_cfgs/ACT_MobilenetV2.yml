@@ -1,0 +1,17 @@
+SSDS: ACT
+NETS: mobilenetv2
+IMAGE_SIZE: [300, 300]
+PRIOR_BOX: 'v2'
+SPLIT_GPUS: False
+K: 2
+OFFSET_POOL: False
+GLOBAL_FEAT: False
+RNN: False
+MEANS: (104, 117, 123)
+STDS: (0.225, 0.224, 0.229)
+FEATURE_LAYER: [[13, 17, 'S', 'S', 'S', 'S'], [96, 320, 512, 256, 256, 128]]
+TEMPORAL_LAYER: ['mean', 'mean', 'mean', 'mean', 'mean', 'mean']
+STEPS: [[16, 16], [32, 32], [64, 64], [100, 100], [150, 150], [300, 300]]
+SIZES: [[45, 45], [90, 90], [135, 135], [180, 180], [225, 225], [270, 270], [315, 315]]
+ASPECT_RATIOS: [[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2], [1, 2]]
+VARIANCE: [0.1, 0.2]
