@@ -1,6 +1,7 @@
 # Spatio-Temporal Action Detection : Pytorch
 
-<img src="assets/009.gif" align="center" height="100" ><img src="assets/037.gif" align="center" height="100" ><img src="assets/059.gif" align="center" height="100"><img src="assets/019.gif" align="center" height="100"><img src="assets/131.gif" align="center" height="100">
+<img src="assets/009.gif" align="center" height="120" ><img src="assets/037.gif" align="center" height="120" ><img src="assets/059.gif" align="center" height="120"><img src="assets/019.gif" align="center" height="120"><img src="assets/131.gif" align="center" height="120">
+##### Visualizations generated from ACT-Mobilenet V2 after post-processing of tubelets using incremental linking algorithm [1]
 
 ### Table of Contents
 - <a href='#installation'>Installation</a>
