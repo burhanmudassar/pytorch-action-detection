@@ -11,17 +11,16 @@ UCF101_CLASSES = (  # always index 0
         'SalsaSpin','SkateBoarding', 'Skiing', 'Skijet', 'SoccerJuggling',
         'Surfing', 'TennisSwing', 'TrampolineJumping', 'VolleyballSpiking', 'WalkingWithDog')
 
-UCF101labels = {k+1:v for k,v in enumerate(UCF101_CLASSES)}
-UCF101labels[0] = {'no_activity'} 
+UCF101labels = ['no_activity'] + list(UCF101_CLASSES)
 
-class UCF24_Dataset(Dataset_plus_Torch_Class):
+class UCF24Dataset(Dataset_plus_Torch_Class):
     """UCF24 Action Detection Dataset
     to access input images and target which is annotation
     """
 
     def __init__(self, name='UCF101', path='../data/ucf24/', split=1):
         self.CLASSES = UCF101_CLASSES
-        super(UCF24_Dataset, self).__init__(name=name, path=path, split=split)
+        super(UCF24Dataset, self).__init__(name=name, path=path, split=split)
 
     def get_database(self):
         with open(self.root + 'splitfiles/UCF101v2-GT.pkl', 'rb') as fff:
@@ -87,5 +86,5 @@ class UCF24_Dataset(Dataset_plus_Torch_Class):
         self.valSet = readsplitfile(splitfile_val)
         self.testSet = readsplitfile(splitfile_test)
 
-        self.labels = [v for k, v in UCF101labels.items()]
+        self.labels = UCF101labels
         self.nlabels = len(self.labels)

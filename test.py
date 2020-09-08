@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--test_scope', dest='test_scope', help='Set phase to test', default=None)
     parser.add_argument('--K', dest='K', help='Length of tubelet', default=2, type=int)
     parser.add_argument('--interval', dest='interval', help='Intra-frame interval', default=1, type=int)
-    parser.add_argument('--phase', dest='phase', choices=['test', 'eval_dropout'],required=True )
+    parser.add_argument('--phase', dest='phase', choices=['test'],required=True )
     parser.add_argument('--init_checkpoint', default=None, help="Specify checkpoints to init from")
     parser.add_argument('--output_dir', dest='output_dir', help='Override default output directory', default=None, type=str)
 

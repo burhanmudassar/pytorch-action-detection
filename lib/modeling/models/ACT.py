@@ -13,9 +13,9 @@ import torch.nn.functional as F
 import os
 from lib.modeling.components.modules import Predictor2D
 from lib.modeling.components.modules import TemporalAggregator
-from lib.modeling.components.modules import TemporalAggregation_Mean
-from lib.modeling.components.modules import TemporalAggregation_Cat
-from lib.modeling.components.modules import TemporalAggregation_ConvCat
+from lib.modeling.components.build_temporalagg import TemporalAggregation_Mean
+from lib.modeling.components.build_temporalagg import TemporalAggregation_Cat
+from lib.modeling.components.build_temporalagg import TemporalAggregation_ConvCat
 
 
 class ACT(nn.Module):
@@ -34,7 +34,7 @@ class ACT(nn.Module):
         head: "multibox head" consists of loc and conf conv layers
     """
 
-    def __init__(self, cfg, num_classes, fmap_size, feature_extractor, offmap_size, num_K, **kwargs):
+    def __init__(self, cfg, num_classes, fmap_size, feature_extractor, num_K, **kwargs):
         super().__init__()
 
         self.cfg = cfg
@@ -94,7 +94,7 @@ class ACT(nn.Module):
             return sources
 
         # Do Temporal Aggregation
-        sources = self.extras([sources])
+        sources = self.extras(sources)
 
         # apply multibox head to source layers
         loc, conf = self.predictor(sources)
@@ -129,7 +129,7 @@ def add_predictor_layers(model_cfg, num_classes, num_K=1, fmap_size=None):
             if 'B' in model_cfg.FEATURE_LAYER[0][k]:
                 in_channels = v * 4
 
-        elif model_cfg.TEMPORAL_LAYER[k] == 'mean':
+        if model_cfg.TEMPORAL_LAYER[k] == 'mean':
             temporalagg_layers += [TemporalAggregation_Mean(model_cfg)]
         elif model_cfg.TEMPORAL_LAYER[k] == 'cat':
             in_channels *= num_K

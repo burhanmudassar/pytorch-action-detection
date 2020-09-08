@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 import pickle
-from lib.layers.box_utils import decode, nms, jaccard, nms3d, nms3dScript
+from lib.modeling.layers.box_utils import nms, nms3d
 
 # Convert location and confidence to a det structure - Rewrite using save_framedets_clsmajor
 def convert_locconf_to_dets(loc, conf_scores, conf_thresh, num_classes, nms_thresh, top_k, return_ids=False):

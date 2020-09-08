@@ -12,7 +12,7 @@ if [ "$1" = "ucfsports" ]; then
     cache_link=https://drive.google.com/uc?1aLkqIyq2BULQWaQGFyir3LJpIYCNaqv-
     elif [ "$1" = "ucf24" ]; then
     sh ./data/jhmdb/get_ucf101_data.sh 0
-    sh ./ydata/jhmdb/get_ucf101_data.sh 1
+    sh ./data/jhmdb/get_ucf101_data.sh 1
     data_dir="./data/ucf24"
     cache_link=https://drive.google.com/uc?1P7ww6KvNeIlgM8ymU5Qz1PQ20G-eEruX
     else

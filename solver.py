@@ -1,3 +1,4 @@
+
 import os
 import sys
 import datetime
@@ -19,9 +20,11 @@ import matplotlib.pyplot as plt
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
+from munch import Munch, munchify
 
 from data import BaseTransformTubeLet
 from data import dataset_factory
+from data import DatasetBuilder
 from lib.modeling.layers.modules import MultiBoxLoss
 from lib.modeling.layers.box_utils import decode
 from lib.utils.evaluation import evaluate_frameAP
@@ -40,6 +43,8 @@ from lib.utils.validation_utils import final_frameNMS
 from lib.utils.visualize_utils import flattenDets
 from lib.utils.visualize_utils import plotWithBoxesLabelsAndScores
 
+from eval_utils import Evaluator
+
 import wandb
 from tqdm import tqdm
 
@@ -52,8 +57,6 @@ else:
 class Solver(object):
 
     def __init__(self, args):
-        wandb.init(project="action-detection", tags=[args.dataset, cfg.MODEL.SSDS, args.input_type, cfg.MODEL.NETS])
-
         self.cfg = cfg
 
         ## Load dataloaders for train and inference
@@ -88,11 +91,13 @@ class Solver(object):
             if torch.cuda.device_count() > 1 and self.multi_gpu:
                 self.model = torch.nn.DataParallel(self.model)
                 self.model.to(device)
-        #
+        
+
+        wandb.init(project="action-detection", tags=[args.dataset, cfg.MODEL.SSDS, args.input_type, cfg.MODEL.NETS])
         wandb.config.update(self.cfg)
 
     def load_dataset(self, dataset_cfg, phase='train'):
-        dataset = dataset_factory.DatasetClass.builder(dataset_cfg.DATASET)
+        dataset = DatasetBuilder(dataset_cfg.DATASET)
 
         AnnotationTransform = dataset_factory.AnnotationTransform
         detection_collate_tubelet = dataset_factory.detection_collate_tubelet
@@ -344,8 +349,6 @@ class Solver(object):
         return trainable_param
 
     def train_loop(self, start_iter=0):
-        # wandb.watch(self.model)
-
         log_file_path = self.output_dir+"training_{}.log".format(self.cfg.DATASET.DATASET)
         log_file = open(log_file_path, "w" if not os.path.exists(log_file_path) else "a", 1)
         log_file.write(datetime.datetime.now().strftime("%a, %d %B %Y %H:%M:%S"))
@@ -457,7 +460,7 @@ class Solver(object):
             torch.cuda.synchronize()
             tvs = time.perf_counter()
             if (iteration % eval_step == 0) and iteration > 0 and 'eval' in self.cfg.PHASE:
-                ap_strs, mAP = self.validation_loop(iteration, phase=['eval'], save=False)
+                ap_strs, mAP = self.validation_loop(iteration, phase=['eval'], save=None)
                 self.model.train()  # Switch net back to training mode
 
                 torch.cuda.synchronize()
@@ -477,21 +480,11 @@ class Solver(object):
         # Train Loop End
         log_file.close()
 
-    def validation_loop(self, iteration, phase='eval', save=False):
+    def validation_loop(self, iteration, phase='eval', save=None):
         self.model.eval()  # switch net to evaluation mode
         with torch.no_grad():
-
-
-            save_dict = {
-                'save': True if save else False,
-                'save_dir': os.path.join('results',
-                                         self.cfg.EXP_DIR,
-                                         self.cfg.DATASET.DATASET),
-            }
-
             dataloader_ = self.test_loader if 'test' in phase else self.eval_loader
-
-            mAP, ap_all, ap_strs = self.validate(dataloader_, iteration, phase=phase, save_dict=save_dict)
+            mAP, ap_all, ap_strs = self.validate(dataloader_, iteration, phase=phase, save=save)
         return ap_strs, mAP
 
     def train_model(self):
@@ -551,14 +544,36 @@ class Solver(object):
 
     def test_model(self):
         self.output_dir = self.create_output_dir()
+
+        save_root = os.path.join('results', self.cfg.EXP_DIR)
+        save_dir = os.path.join(save_root, self.cfg.DATASET.DATASET)
         self.writer = SummaryWriter(log_dir=self.output_dir)
         previous = self.find_previous()
         iteration = 0
+
+        eval_args = {   
+                        'checkpoints_dir':   save_root,              
+                        'K':self.cfg.MODEL.K,
+                        'dataset':self.cfg.DATASET.DATASET,
+                        'path':self.cfg.DATASET.DATASET_DIR,
+                        'split':self.test_loader.dataset.split,
+                        'redo':False,
+                        'eval_mode':self.cfg.DATASET.INPUT_TYPE
+                    }
+
         if previous:
             for iteration, resume_checkpoint in zip(previous[0], previous[1]):
                 if self.cfg.TEST.TEST_SCOPE[0] <= iteration <= self.cfg.TEST.TEST_SCOPE[1]:
                     self.resume_checkpoint(resume_checkpoint)
-                    self.validation_loop(iteration, phase=self.cfg.PHASE, save=True)
+                    self.validation_loop(iteration, phase=self.cfg.PHASE, save=save_dir)
+
+                    ## Call evaluator object
+                    eval_args['eval_iter'] = iteration
+                    # eval_args['checkpoints_dir'] =  os.path.join(save_dir,
+                    #                       self.test_loader.dataset.input_type + '-' + str(self.test_loader.dataset.split).zfill(2) + '-' + str(
+                    #                           iteration).zfill(6))
+                    evaluator_ = Evaluator(munchify(eval_args))
+                    evaluator_.normal_summarize()
                     
         else:
             print("Loading pretrained checkpoint")
@@ -566,7 +581,15 @@ class Solver(object):
                 self.resume_checkpoint_separate(self.cfg.RESUME_CHECKPOINT, self.cfg.TRAIN.RESUME_SCOPE)
             elif len(self.cfg.RESUME_CHECKPOINT) == 1:
                 self.resume_checkpoint_pretrained(self.model, self.cfg.RESUME_CHECKPOINT[0], self.cfg.TRAIN.RESUME_SCOPE)
-            self.validation_loop(iteration, phase=self.cfg.PHASE, save=True)
+            self.validation_loop(iteration, phase=self.cfg.PHASE, save=save_dir)
+
+            ## Call evaluator object
+            eval_args['eval_iter'] = iteration
+            # eval_args['checkpoints_dir'] =  os.path.join(save_dir,
+            #                               self.test_loader.dataset.input_type + '-' + str(self.test_loader.dataset.split).zfill(2) + '-' + str(
+            #                                   iteration).zfill(6))
+            evaluator_ = Evaluator(munchify(eval_args))
+            evaluator_.normal_summarize()
 
     def visualize_model(self):
         self.output_dir = self.create_output_dir()
@@ -592,7 +615,7 @@ class Solver(object):
                 self.resume_checkpoint_pretrained(self.model, self.cfg.RESUME_CHECKPOINT[0], self.cfg.TRAIN.RESUME_SCOPE)
             self.visualize(dataloader_, iteration)
 
-    def validate(self, val_data_loader, iteration_num, phase='eval', save_dict={}):
+    def validate(self, val_data_loader, iteration_num, phase='eval', save=None):
         """Test a SSD network on an image database."""
         iou_thresh = self.cfg.TEST.IOU_THRESHOLD
         conf_thresh = self.cfg.POST_PROCESS.SCORE_THRESHOLD
@@ -619,8 +642,6 @@ class Solver(object):
         noneCounter = 0
 
         ## Variables need for saving results
-        save_results = save_dict['save']
-        save_root = save_dict['save_dir']
         image_ids = val_dataset.ids
         save_ids = []
 
@@ -628,17 +649,15 @@ class Solver(object):
         loc_losses = AverageMeter()
         cls_losses = AverageMeter()
 
-        if 'test' in phase:
-            output_dir = os.path.join(save_root,
+        if save:
+            output_dir = os.path.join(save,
                                           val_dataset.input_type + '-' + str(val_dataset.split).zfill(2) + '-' + str(
                                               iteration_num).zfill(6))
             log_file = os.path.join(output_dir, 'testing-' + str(iteration_num).zfill(6) + '.log')
+            det_file = os.path.join(output_dir, 'detection-' + str(iteration_num).zfill(6) + '.pkl')
             os.makedirs(output_dir, exist_ok=True)
         else:
             output_dir = None
-
-        if save_results:
-            det_file = os.path.join(output_dir, 'detection-' + str(iteration_num).zfill(6) + '.pkl')
 
         losses = AverageMeter()
         loc_losses = AverageMeter()
@@ -701,7 +720,7 @@ class Solver(object):
                 conf_scores = self.model.softmax(conf_preds[b]).data.clone()
 
                 # TODO: class agnostic NMS for storing all tubelets - using max score of tubelet
-                if save_results:
+                if save:
                     save_tubelets_nms3d(decoded_boxes, conf_scores, output_dir, videoname, frame_range_1)
 
                 # per-class 3D NMS
@@ -724,7 +743,7 @@ class Solver(object):
 
         # TODO: 2D NMS on frame detections -because multiple clips are overwriting to the same frame
         print('Applying 2d NMS', iteration_num)
-        final_frameNMS(det_boxes, save_results, output_dir, nms_thresh, topk)
+        final_frameNMS(det_boxes, save, output_dir, nms_thresh, topk)
 
 
         print('Evaluating detections for itration number ', iteration_num)
@@ -752,7 +771,7 @@ class Solver(object):
             print(ap_str)
         print('Mean AP {}\n'.format(mAP))
 
-        if save_results:
+        if save:
             if 'test' in phase:
                 with open(det_file, 'wb') as f:
                     pickle.dump([gt_boxes, det_boxes, save_ids], f, pickle.HIGHEST_PROTOCOL)

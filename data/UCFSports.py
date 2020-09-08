@@ -17,8 +17,7 @@ UCFSPORTS_CLASSES = (  # always index 0
     'Walk'
 )
 
-UCFSports_labels = {k+1:v for k,v in enumerate(UCFSPORTS_CLASSES)}
-UCFSports_labels[0] = {'no_activity'} 
+UCFSports_labels = ['no_activity'] + list(UCFSPORTS_CLASSES)
 
 class UCFSportsDataset(Dataset_plus_Torch_Class):
     """UCF24 Action Detection Dataset
@@ -73,7 +72,7 @@ class UCFSportsDataset(Dataset_plus_Torch_Class):
         self.trainSet = readsplitfile(splitfile_train)
         self.testSet = readsplitfile(splitfile_test)
 
-        self.labels = [v for k, v in UCFSports_labels.items()]
+        self.labels = UCFSports_labels
         self.nlabels = len(self.labels)
 
         with open(os.path.join(self.root, 'splitfiles/UCFSports-GT.pkl'.format(self.split-1)), 'rb') as fid:

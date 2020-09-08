@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
-from .UCF24 import UCF24_Dataset
+from .UCF24 import UCF24Dataset
 from .JHMDB21 import JHMDB21Dataset
 from .UCFSports import UCFSportsDataset
+
+__all__ = ['PriorBox']
 
 def base_transform(image, size, mean):
     x = cv2.resize(image, (size, size)).astype(np.float32)
@@ -37,12 +39,12 @@ class BaseTransformTubeLet:
         return base_transform_tubelet(image, self.size, self.mean, self.std), boxes, labels
 
 
-def DatasetBuilder(dataset='ucf24', path='data/ucf24/', split=1):
+def DatasetBuilder(dataset='ucf24'):
     if dataset == 'ucf24':
-        return UCF24_Dataset(path=path, split=split)
+        return UCF24Dataset
     elif dataset == 'jhmdb':
-        return JHMDB21Dataset(path=path, split=split)
+        return JHMDB21Dataset
     elif dataset == 'ucfsports':
-        return UCFSportsDataset(path=path, split=split)
+        return UCFSportsDataset
     else:
         raise IndexError

@@ -77,7 +77,7 @@ class TemporalAggregator(nn.Module):
         self.K = cfg.K
 
     def forward(self, input):
-        sources = input[0]
+        sources = input
         sources_new = []
 
         for x_ind, x in enumerate(sources):

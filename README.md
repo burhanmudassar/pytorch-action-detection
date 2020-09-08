@@ -17,6 +17,10 @@
   * Python 3.6
   * Pytorch 1.4.0
   * OpenCV Python
+
+```
+./setup.sh
+```
   
 ## Datasets
 - UCF101-24
@@ -58,7 +62,8 @@ Supports experiment logging through both tensorboard as well as Weights and Bias
 
 ## Test
 
-To test the model run test.py with the specified arguments. You can specify the checkpoint iterations to test in the config file or select a single checkpoint by specfying `test_scope`.
+To test the model run test.py with the specified arguments. You can specify the checkpoint iterations to test in the config file or select a single checkpoint by specfying `test_scope`. By default, it will save the un-processed tubelets for each frame alongwith 2D NMSed frame
+detections. 
 
 ```Shell
 python3 test.py 
@@ -68,6 +73,21 @@ python3 test.py
         --dataset_dir=data/ 
         --input_type=rgb 
         --phase test
+```
+
+Once the tubelets are generated, run eval_utils.py with the specified arguments. It will evaluate frame level AP, MABO, CLASSIF
+followed by building action tubes and then evaluating video mAP. Multithreading is implemented which considerably reduces the tube
+building time.
+
+```Shell
+python3 eval_utils.py 
+--c results/checkpoints/new_models/act_mobilenetv2/ 
+--eval_iter 30000 
+--K 2 
+--dataset ucfsports 
+--split 0 
+--path=data/ucfsports/ 
+--eval_mode rgb
 ```
 
 ## Visualizing
@@ -97,39 +117,49 @@ The evaluation will return the following metrics
   </tr>
   <tr>
     <td align="left">VGG-16</td> 
-    <td>76.91</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
   </tr>
   <tr>
     <td align="left">Mobilenet V2</td> 
-    <td>76.91</td>
-
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
   </tr>
   <tr>
     <td align="left"> ResNet-50 </td>
-    <td>76.50</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
   </tr>
 </table>
  
 ## TODO
 
+Pull Requests Welcome!
 
+- [] Add a switch to disable/enable wandb logging
+- [x] Call Evaluator directly from test
+- [] Remove redundant methods from datasets (better way to init, )
+- [x] Remove redundant NMS step in eval_utils
+- [] Train and upload models
+- [] Add K to the output directory name
+- [] Combine command overrides from train, test and visualize into a single file
+- [] Add support for AVA
 
-## Citation
-If this work has been helpful in your research please consider
 
 ## Acknowledgements
 The code in this branch is heavily adopted and repurposed for
-our work from the following codebases. In addition the core structure for the repo is adapted from ssds.pytorch
+our work from the following codebases. In addition the core structure for the repo is adapted from [ssds.pytorch].(https://github.com/ShuangXieIrene/ssds.pytorch)
+
 Big thanks to the following.
-- Real Time Online Activity Detection (Gurkirt Singh)
-- Action Tubelet Detector (Vicky Kalogeiton)
+- [Real Time Online Activity Detection](https://github.com/gurkirt/realtime-action-detection) [1]
+- [Action Tubelet Detector](https://github.com/vkalogeiton/caffe/tree/act-detector) [2]
+- [ssds.pytorch](https://github.com/ShuangXieIrene/ssds.pytorch)
 
 ## References
-- [1] Wei Liu, et al. SSD: Single Shot MultiBox Detector. [ECCV2016]((http://arxiv.org/abs/1512.02325)).
-- [2] S. Saha, G. Singh, M. Sapienza, P. H. S. Torr, and F. Cuzzolin, Deep learning for detecting multiple space-time action tubes in videos. BMVC 2016 
-- [3] X. Peng and C. Schmid. Multi-region two-stream R-CNN for action detection. ECCV 2016
-- [4] G. Singh, S Saha, M. Sapienza, P. H. S. Torr and F Cuzzolin. Online Real time Multiple Spatiotemporal Action Localisation and Prediction. ICCV, 2017.
-- [5] Kalogeiton, V., Weinzaepfel, P., Ferrari, V. and Schmid, C., 2017. Action Tubelet Detector for Spatio-Temporal Action Localization. ICCV, 2017.
-- [Original SSD Implementation (CAFFE)](https://github.com/weiliu89/caffe/tree/ssd)
-- A huge thanks to Max deGroot, Ellis Brown for Pytorch implementation of [SSD](https://github.com/amdegroot/ssd.pytorch)
+- [1] G. Singh, S Saha, M. Sapienza, P. H. S. Torr and F Cuzzolin. Online Real time Multiple Spatiotemporal Action Localisation and Prediction. ICCV, 2017.
+- [2] Kalogeiton, V., Weinzaepfel, P., Ferrari, V. and Schmid, C., 2017. Action Tubelet Detector for Spatio-Temporal Action Localization. ICCV, 2017.
+- [3] A huge thanks to Max deGroot, Ellis Brown for Pytorch implementation of [SSD](https://github.com/amdegroot/ssd.pytorch)
  

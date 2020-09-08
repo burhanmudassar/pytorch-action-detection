@@ -27,8 +27,7 @@ JHMDB_CLASSES = (  # always index 0
     'walk',
     'wave')
 
-JHMDB21_labels = {k+1:v for k,v in enumerate(JHMDB_CLASSES)}
-JHMDB21_labels[0] = {'no_activity'} 
+JHMDB21_labels =  ['no_activity'] + list(JHMDB_CLASSES)
 
 class JHMDB21Dataset(Dataset_plus_Torch_Class):
     """UCF24 Action Detection Dataset
@@ -94,5 +93,5 @@ class JHMDB21Dataset(Dataset_plus_Torch_Class):
         self.testSet = readsplitfile(splitfile_test)
         self.valSet = readsplitfile(splitfile_val)
 
-        self.labels = [v for k, v in JHMDB21_labels.items()]
+        self.labels = JHMDB21_labels
         self.nlabels = len(self.labels)
