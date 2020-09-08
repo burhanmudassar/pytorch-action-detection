@@ -1,6 +1,6 @@
 # Spatio-Temporal Action Detection : Pytorch
 
-[](assets/009.gif)
+![](assets/009.gif)
 
 ### Table of Contents
 - <a href='#installation'>Installation</a>
