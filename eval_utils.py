@@ -1,12 +1,14 @@
 import os
+import cv2
 import pickle
 import scipy.io as sio
 import argparse
-import tqdm
+from tqdm import tqdm
 from multiprocessing import Process, Queue, Lock
 from lib.utils.misc_utils import ensure_dir
 from lib.utils.box_utils import *
 from lib.utils.ap_utils import pr_to_ap
+from lib.utils.plot_utils import plot_boxes_on_image
 from data import DatasetBuilder
 import pandas as pd
 pd.options.display.float_format = '{:.2f}'.format
@@ -27,29 +29,16 @@ def main():
     parser.add_argument('--split', default=1, type=int, help='Which split of the dataset to work on')
     parser.add_argument('--redo', dest='redo', help='Redo Evaluation', action='store_true')
     parser.add_argument('--eval_mode', choices=['rgb', 'brox', 'fusion'], required=True, help='Which detections to evaluate')
+    parser.add_argument('--plot',type=bool, default=False, help='Plot action tubes')
 
 
     args = parser.parse_args()
 
     _Evaluator = Evaluator(args=args)
     _Evaluator.normal_summarize()
-
-def unit_test_evaluators(dataset, testlist):
-    ### Burhan Code to verify that ground truth labels are the same with the ACT -detector and my pytorch evaluator
-    countGT = [0 for labels in dataset.labels]
-    for iv, vid in enumerate(testlist):
-        tubes = dataset.gtTubes(vid)
-        for ilabel, label in enumerate(dataset.labels):
-
-            if not ilabel in tubes:
-                continue
-
-            for tube in tubes[ilabel]:
-                for i in range(tube.shape[0]):
-                    countGT[ilabel] += 1
-    for il, label in enumerate(dataset.labels[1:]):
-        print("{:20s} {:8.2f}".format(label, countGT[il]))
-
+    print("Plot Mode")
+    for vid in tqdm(_Evaluator.dataset.testSet):
+        _Evaluator.plot_tubes(vid)
 
 class Evaluator:
 
@@ -176,6 +165,28 @@ class Evaluator:
                 alldets[ilabel] += [(v, ltubes[i][1], ltubes[i][0]) for i in idx]
 
         self.tubes = alldets
+   
+    def plot_tubes(self, video):
+        videotubes=self.tubeloader_singlevideo(video=video, dirname=self.actionTubesDir)
+        plot_tubes(self.dataset, video, self.actionTubesDir, videotubes)
+
+    def tubeloader_singlevideo(self, video, dirname):
+        # print("Loading all tubes")
+        # alldets = {ilabel: [] for ilabel in range(self.dataset.nlabels-1)}
+        alldets = []
+        tubename = os.path.join(dirname, video + '_tubes.pkl')
+        if not os.path.isfile(tubename):
+            print("ERROR: Missing extracted tubes " + tubename)
+            sys.exit()
+
+        with open(tubename, 'rb') as fid:
+            tubes = pickle.load(fid)
+
+        for ilabel in range(self.dataset.nlabels-1):
+            ltubes = tubes[ilabel]
+            alldets.append(ltubes)
+
+        return alldets
 
 
 def load_detsfile_kernel(num, d, vlist, K, dirname, queue, lock):
@@ -839,6 +850,37 @@ def load_frame_detections(fname, mode='frame_det'):
 
     return reference
 
+def plot_tubes(d, video, dirname, alldets={}):
+    nframes = d.nframes(video)
+    w, h = d.get_resolution(video)
+    gt_activity_label = d.get_video_act(video)
+
+    tubes_activity = alldets[gt_activity_label]
+    tubes_sorted = sorted(tubes_activity, key=lambda pair: -pair[1])
+    color_array = ['green', 'blue', 'orange']
+    color_tubes = [color_array[gt_activity_label % len(color_array)] for _ in range(len(tubes_sorted))]
+
+    for ind, frame_num in enumerate(tqdm(range(1, nframes+1), leave=True)):
+        # print(d.frame_format(video, frame_num))
+        image = d.framepath_rgb(video, frame_num)
+        im = cv2.imread(image)
+
+        frame_dets = [t[0][np.where(t[0][:, 0] == frame_num)[0], :] for t in tubes_sorted if len(np.where(t[0][:, 0] == frame_num)[0]) > 0]
+        if len(frame_dets) > 0:
+            box = [t[0, 1:5] for t in frame_dets]
+            score = [t[1] for t in tubes_sorted if len(np.where(t[0][:, 0] == frame_num)[0]) > 0]
+            label = [d.labels[gt_activity_label+1] for t in tubes_sorted if len(np.where(t[0][:, 0] == frame_num)[0]) > 0]
+
+            score = [s for s in score if s > 0.2]
+            box = [t for t,s in zip(box, score) if s > 0.2]
+            label = [l for l,s in zip(label, score) if s >0.2]
+
+            im = plot_boxes_on_image(im, box, label, score, color_tubes)
+
+        outfile = os.path.join(dirname, d.frame_format(video, frame_num) + '.jpg')
+        if not os.path.exists(os.path.dirname(outfile)):
+            os.makedirs(outfile, exist_ok=True)
+        cv2.imwrite(outfile, im)
 
 if __name__ == '__main__':
     main()

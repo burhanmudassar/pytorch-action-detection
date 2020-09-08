@@ -1,5 +1,7 @@
 # Spatio-Temporal Action Detection : Pytorch
 
+[](assets/009.gif)
+
 ### Table of Contents
 - <a href='#installation'>Installation</a>
 - <a href='#datasets'>Datasets</a>
@@ -139,14 +141,14 @@ The evaluation will return the following metrics
 
 Pull Requests Welcome!
 
-- [] Add a switch to disable/enable wandb logging
+- [ ] Add a switch to disable/enable wandb logging
 - [x] Call Evaluator directly from test
-- [] Remove redundant methods from datasets (better way to init, )
+- [ ] Remove redundant methods from datasets (better way to init, )
 - [x] Remove redundant NMS step in eval_utils
-- [] Train and upload models
-- [] Add K to the output directory name
-- [] Combine command overrides from train, test and visualize into a single file
-- [] Add support for AVA
+- [ ] Train and upload models
+- [ ] Add K to the output directory name
+- [ ] Combine command overrides from train, test and visualize into a single file
+- [ ] Add support for AVA
 
 
 ## Acknowledgements
