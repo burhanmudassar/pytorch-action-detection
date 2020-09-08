@@ -7,11 +7,10 @@ from multiprocessing import Process, Queue, Lock
 from lib.utils.misc_utils import ensure_dir
 from lib.utils.box_utils import *
 from lib.utils.ap_utils import pr_to_ap
-from lib.utils.nms_utils import nms_fn
-from lib.utils.nms_utils import global_nms
 from data import DatasetBuilder
 import pandas as pd
 pd.options.display.float_format = '{:.2f}'.format
+pd.set_option('display.max_columns', None)
 
 opts = {
     'num_workers' : 8
@@ -24,6 +23,7 @@ def main():
 
     parser.add_argument('--K', default=1, type=int, required=True, help='Size of subsequences')
     parser.add_argument('--dataset', choices=['ucf24', 'jhmdb', 'ucfsports', 'move'], required=True, help='Dataset to train on')
+    parser.add_argument('--path', type=str, required=True, help='Path for the dataset')
     parser.add_argument('--split', default=1, type=int, help='Which split of the dataset to work on')
     parser.add_argument('--redo', dest='redo', help='Redo Evaluation', action='store_true')
     parser.add_argument('--eval_mode', choices=['rgb', 'brox', 'fusion'], required=True, help='Which detections to evaluate')
@@ -63,16 +63,8 @@ class Evaluator:
         self.tubes = None
         self.K = args.K
 
-
-
-        if args.dataset == 'ucf24':
-            self.dataset = UCF24_Dataset(path='data/ucf24/', split=args.split)
-        elif args.dataset == 'jhmdb':
-            self.dataset = JHMDB21Detection_Tubelet(path='data/jhmdb/', split=args.split)
-        elif args.dataset == 'move':
-            self.dataset = MOVEDetection_Tubelet(path='data/move/', split=args.split)
-        elif args.dataset == 'ucfsports':
-            self.dataset = UCFSportsDetection_Tubelet(path='data/ucfsports/', split=args.split)
+        self.dataset = DatasetBuilder(args.dataset)
+        self.dataset = self.dataset(name=args.dataset, path=args.path, split=args.split)
 
         # Evaluate on test data
         self.testlist = self.dataset.testSet
@@ -158,23 +150,9 @@ class Evaluator:
         self.videoAP(th=0.95)
 
         self.dataframe['vAP @ 0.5:0.95'] = np.mean([self.dataframe['vAP @ {:.2f}'.format(th)].values for th in np.arange(0.5, 1.0, 0.05)], axis=0)
-        # Renormalize over the classes that are present in the dataset
-        if isinstance(self.dataset, MOVEDetection_Tubelet):
-            self.dataframe.loc['Mean'] *= 24/15
         print(self.dataframe)
         with open(os.path.join(self.resultDir,'summary.txt'), 'w') as fid:
             fid.write(str(self.dataframe))
-
-    def speed_summarize(self):
-        testlist = self.dataset.testSet
-        rDir = self.dataset.path + 'stats/'
-        ensure_dir(rDir)
-
-        list_slow, list_med, list_fast = computeActorSpeed(self.dataset, testlist, redo=self.redo, dirname=rDir)
-
-        self.frameAP(testlist=list_slow, th=0.5, prefix='slow')
-        self.frameAP(testlist=list_med, th=0.5, prefix='med')
-        self.frameAP(testlist=list_fast, th=0.5, prefix='fast')
 
     def print_summary(self):
         # Print all metrics in a nice and clean tabular form possibly using Pandas
